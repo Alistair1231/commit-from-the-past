@@ -9,8 +9,8 @@ exit 11  #)Created by argbash-init v2.10.0
 # ARG_OPTIONAL_SINGLE([hours],[H],[commit time difference in hours],[0])
 # ARG_OPTIONAL_SINGLE([days],[d],[commit time difference] in days,[0])
 # ARG_OPTIONAL_SINGLE([message],[m],[commit message, when used with --amend leave empty to keep message as is])
-# ARG_OPTIONAL_BOOLEAN([amend],[a],[apply time shift to last commit, or to specific commit using --amend-commit])
-# ARG_OPTIONAL_BOOLEAN([test],,[only test, don't actually run])
+# ARG_OPTIONAL_BOOLEAN([amend],[a],[apply time shift to last commit])
+# ARG_OPTIONAL_BOOLEAN([simulate],,[only simulate, don't actually run])
 # ARGBASH_SET_DELIM([ =])
 # ARG_OPTION_STACKING([getopt])
 # ARG_RESTRICT_VALUES([no-local-options])
@@ -73,7 +73,7 @@ echo $arg1;
 echo $arg2;
 echo;
 
-if [[ $_arg_test == 'on' ]]; then
+if [[ $_arg_simulate == 'on' ]]; then
     exit 0;
 else
 	read -r -p "Are you sure? [Y/n]" response

@@ -7,8 +7,8 @@
 # ARG_OPTIONAL_SINGLE([hours],[H],[commit time difference in hours],[0])
 # ARG_OPTIONAL_SINGLE([days],[d],[commit time difference in days],[0])
 # ARG_OPTIONAL_SINGLE([message],[m],[commit message, when used with --amend leave empty to keep message as is])
-# ARG_OPTIONAL_BOOLEAN([amend],[a],[apply time shift to last commit, or to specific commit using --amend-commit])
-# ARG_OPTIONAL_BOOLEAN([test],[],[only test, don't actually run])
+# ARG_OPTIONAL_BOOLEAN([amend],[a],[apply time shift to last commit])
+# ARG_OPTIONAL_BOOLEAN([simulate],[],[only simulate, don't actually run])
 # ARGBASH_SET_DELIM([ =])
 # ARG_OPTION_STACKING([getopt])
 # ARG_RESTRICT_VALUES([no-local-options])
@@ -31,7 +31,7 @@ die()
 
 evaluate_strictness()
 {
-	[[ "$2" =~ ^-(-(hours|days|message|amend|test|help)$|[Hdmah]) ]] && die "You have passed '$2' as a value of argument '$1', which makes it look like that you have omitted the actual value, since '$2' is an option accepted by this script. This is considered a fatal error."
+	[[ "$2" =~ ^-(-(hours|days|message|amend|simulate|help)$|[Hdmah]) ]] && die "You have passed '$2' as a value of argument '$1', which makes it look like that you have omitted the actual value, since '$2' is an option accepted by this script. This is considered a fatal error."
 }
 
 
@@ -47,17 +47,17 @@ _arg_hours="0"
 _arg_days="0"
 _arg_message=
 _arg_amend="off"
-_arg_test="off"
+_arg_simulate="off"
 
 
 print_help()
 {
-	printf 'Usage: %s [-H|--hours <arg>] [-d|--days <arg>] [-m|--message <arg>] [-a|--(no-)amend] [--(no-)test] [-h|--help]\n' "$0"
+	printf 'Usage: %s [-H|--hours <arg>] [-d|--days <arg>] [-m|--message <arg>] [-a|--(no-)amend] [--(no-)simulate] [-h|--help]\n' "$0"
 	printf '\t%s\n' "-H, --hours: commit time difference in hours (default: '0')"
 	printf '\t%s\n' "-d, --days: commit time difference in days (default: '0')"
 	printf '\t%s\n' "-m, --message: commit message, when used with --amend leave empty to keep message as is (no default)"
-	printf '\t%s\n' "-a, --amend, --no-amend: apply time shift to last commit, or to specific commit using --amend-commit (off by default)"
-	printf '\t%s\n' "--test, --no-test: only test, don't actually run (off by default)"
+	printf '\t%s\n' "-a, --amend, --no-amend: apply time shift to last commit (off by default)"
+	printf '\t%s\n' "--simulate, --no-simulate: only simulate, don't actually run (off by default)"
 	printf '\t%s\n' "-h, --help: Prints help"
 }
 
@@ -122,9 +122,9 @@ parse_commandline()
 					{ begins_with_short_option "$_next" && shift && set -- "-a" "-${_next}" "$@"; } || die "The short option '$_key' can't be decomposed to ${_key:0:2} and -${_key:2}, because ${_key:0:2} doesn't accept value and '-${_key:2:1}' doesn't correspond to a short option."
 				fi
 				;;
-			--no-test|--test)
-				_arg_test="on"
-				test "${1:0:5}" = "--no-" && _arg_test="off"
+			--no-simulate|--simulate)
+				_arg_simulate="on"
+				test "${1:0:5}" = "--no-" && _arg_simulate="off"
 				;;
 			-h|--help)
 				print_help
@@ -152,10 +152,12 @@ parse_commandline "$@"
 
 # vvv  PLACE YOUR CODE HERE  vvv
 # if amend on
+# if amend on
 if [[ $_arg_amend == 'on' ]] ;then
     printf 'Commit will be amended\n'
     amend="--amend --no-edit"
 fi
+
 
 # if hours or days is not empty
 if ( [[ $_arg_hours != 0 ]] || [[ $_arg_days != 0 ]] ) ;then
@@ -166,11 +168,11 @@ if ( [[ $_arg_hours != 0 ]] || [[ $_arg_days != 0 ]] ) ;then
         printf 'Commit will be %s days shifted\n' "$_arg_days"
     fi
     date=$(LC_TIME="en_US.utf8" date -d "$_arg_days days $_arg_hours hours")
-    echo "date of commit will be: $date"
+    echo "RESULTING DATE: $date"
+    echo;
 else
     date=$(LC_TIME="en_US.utf8" date)
 fi
-
 
 # amend off, but commit message is empty
 if ( [[ $_arg_amend == 'off' ]] && [[ -z $_arg_message ]] ) ;then
@@ -183,7 +185,8 @@ if ( [[ $_arg_amend == 'off' ]] && [[ -z $_arg_message ]] ) ;then
 fi
 # commit message not empty
 if [[ ! -z $_arg_message ]] ;then
-    printf 'Commit message will be: %s\n' "$_arg_message"
+    printf 'COMMIT MESSAGE: %s\n' "$_arg_message"
+
     msg="-m \"$_arg_message\""
 fi
 
@@ -193,15 +196,25 @@ if [[ $show_help == 1 ]];then
     exit 1;
 fi
 
-arg='GIT_COMMITTER_DATE="'$date'"; git commit '$amend' --date "'$date'" '$msg
+arg1='GIT_COMMITTER_DATE="'$date'";'
+arg2='git commit '$amend' --date "'$date'" '$msg
+echo;
+echo "FINAL COMMAND:";
+echo $arg1;
+echo $arg2;
+echo;
 
-if [[ $_arg_test == 'on' ]]; then
-    echo "test mode"
-    echo $arg
+if [[ $_arg_simulate == 'on' ]]; then
+    exit 0;
 else
-    eval $arg
-fi
+	read -r -p "Are you sure? [Y/n]" response
+	response=${response,,} # tolower
+	if [[ $response =~ ^(yes|y|Y| ) ]] || [[ -z $response ]]; then
+    	eval $arg1
+    	eval $arg2
+	fi
 
+fi
 
 # ^^^  TERMINATE YOUR CODE BEFORE THE BOTTOM ARGBASH MARKER  ^^^
 
